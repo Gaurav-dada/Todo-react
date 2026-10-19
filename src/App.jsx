@@ -196,7 +196,8 @@ function App() {
                             </p>
                         </div>
 
-                        <FilterTodo newarr={newarr} />
+                        <FilterTodo newarr={newarr}
+                        checkHandle={checkHandle} />
                     </section>
                 </div>
 

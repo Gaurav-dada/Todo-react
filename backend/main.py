@@ -18,9 +18,7 @@ app.add_middleware(
 )
 
 lists = [
-    { "id":1,"tasks": "Momo", "activity": False},
-    {"id":2,"tasks": "Chowmein", "activity": False},
-    { "id":3,"tasks": "Pizza", "activity": False},
+    
 ]
 
 
