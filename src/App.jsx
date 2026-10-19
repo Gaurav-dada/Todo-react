@@ -1,109 +1,183 @@
-import { useEffect, useState } from 'react'
 
-import './App.css'
-import Header from './Components/Header'
-import Body from './Components/Body'
-import TodoPreview from './Components/TodoPreview'
-import FilterTodo from './Components/FilterTodo'
+import { useEffect, useState } from "react";
+
+import Header from "./Components/Header";
+import Body from "./Components/Body";
+import TodoPreview from "./Components/TodoPreview";
+import FilterTodo from "./Components/FilterTodo";
 
 function App() {
-    const arr = []
+    const API = "http://127.0.0.1:8000/lists";
 
-    const [savedData] = useState(() => {
-        const data = localStorage.getItem("todo")
-        return data ? JSON.parse(data) : null
-    })
+    const [currarr, setNewArr] = useState([]);
+    const [inputData, setInputData] = useState("");
+    const [editInput, setEditInput] = useState("");
+    const [activity, setActivity] = useState({});
+    const [currsignal, setSignal] = useState(false);
+    const [editid, setEditid] = useState("");
 
-    const [currarr, setNewArr] = useState(() => savedData?.newarr ?? [])
-    const newarr = [...arr, ...currarr]
+    const newarr = [...currarr];
 
-    const [inputData, setInputData] = useState("")
-    const [editInput, setEditInput] = useState("")
-    const [activity, setActivity] = useState(() => savedData?.activity ?? {})
+    async function fetcher() {
+        try {
+            const res = await fetch(API);
+
+            if (!res.ok) {
+                throw new Error("Failed to fetch todos");
+            }
+
+            const data = await res.json();
+            setNewArr(data);
+        } catch (error) {
+            console.error("Error fetching todos:", error);
+        }
+    }
 
     useEffect(() => {
-        localStorage.setItem(
-            "todo",
-            JSON.stringify({ newarr, activity })
-        )
-    }, [newarr, activity])
+        fetcher();
+    }, []);
 
-    function handle(lisss) {
-        if (editInput !== "") {
-            setNewArr((prev) =>
-                prev.map((item, index) =>
-                    index === editInput - arr.length ? lisss : item
-                )
-            )
-            setEditInput('')
-        } else {
-            setNewArr((prev) => [...prev, lisss])
-        }
+    async function edit(id) {
+        setEditid(id);
 
-        setInputData("")
-    }
+        try {
+            const res = await fetch(`${API}/${id}`);
 
-    function handleEdit(item, index) {
-        setInputData(item)
-        setEditInput(index)
-    }
+            if (!res.ok) {
+                throw new Error("Failed to fetch todo");
+            }
 
-    function handleDelete(index, liss) {
-        if (index >= arr.length) {
-            setNewArr((prev) =>
-                prev.filter((item, i) => i !== index - arr.length)
-            )
+            const response = await res.json();
+
+            setEditInput(response.tasks);
+            setInputData(response.tasks);
+        } catch (error) {
+            console.error("Error:", error);
         }
     }
 
-    function checkHandle(index) {
-        setActivity((prev) => ({
-            ...prev,
-            [index]: !prev[index]
-        }))
+    async function delet(id) {
+        try {
+            const res = await fetch(`${API}/${id}`, {
+                method: "DELETE",
+            });
+
+            if (!res.ok) {
+                throw new Error("Failed to delete todo");
+            }
+
+            await fetcher();
+        } catch (error) {
+            console.error("Error:", error);
+        }
+    }
+
+    async function checkHandle(id) {
+        try {
+            const res = await fetch(`${API}/${id}`);
+
+            if (!res.ok) {
+                throw new Error("Failed to get todo");
+            }
+
+            const response = await res.json();
+            const updatedActivity = !response.activity;
+
+            const updateRes = await fetch(`${API}/${id}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    activity: updatedActivity,
+                }),
+            });
+
+            if (!updateRes.ok) {
+                throw new Error("Failed to update todo");
+            }
+
+            await fetcher();
+        } catch (error) {
+            console.error("Error:", error);
+        }
     }
 
     return (
-        <div className="min-h-screen bg-slate-100 px-4 py-6 sm:px-6 lg:px-10">
+        <div className="min-h-screen bg-slate-100 px-4 py-8 sm:px-6 lg:px-8">
             <div className="mx-auto max-w-7xl">
 
-                {/* Dashboard heading */}
-                <div className="mb-8 rounded-2xl bg-gradient-to-r from-slate-900 to-blue-900 p-6 text-white shadow-xl sm:p-8">
-                    <p className="mb-2 text-sm font-medium uppercase tracking-widest text-blue-300">
+                {/* Dashboard Header */}
+                <header className="mb-8 rounded-2xl bg-gradient-to-r from-blue-700 to-indigo-600 px-6 py-10 text-white shadow-lg sm:px-10">
+                    <p className="mb-2 text-sm font-semibold uppercase tracking-[0.2em] text-blue-100">
                         Stay organized
                     </p>
 
-                    <h1 className="text-3xl font-extrabold sm:text-4xl">
+                    <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
                         Todo Dashboard
                     </h1>
 
-                    <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300 sm:text-base">
-                        Manage your tasks, track your progress, and stay
-                        productive every day.
+                    <p className="mt-4 max-w-2xl text-sm leading-6 text-blue-100 sm:text-base">
+                        Manage your tasks, track your progress,
+                        and stay productive every day.
                     </p>
-                </div>
 
-                {/* Add todo */}
-                <section className="mb-6 rounded-2xl bg-white p-5 shadow-md sm:p-6">
-                    <h2 className="mb-4 text-xl font-bold text-slate-800">
-                        Add a Task
-                    </h2>
+                    <div className="mt-6 flex flex-wrap gap-3">
+                        <div className="rounded-lg bg-white/15 px-4 py-2 text-sm font-medium backdrop-blur">
+                            Total Tasks: {currarr.length}
+                        </div>
+
+                        <div className="rounded-lg bg-white/15 px-4 py-2 text-sm font-medium backdrop-blur">
+                            Completed:{" "}
+                            {currarr.filter(
+                                (task) => task.activity
+                            ).length}
+                        </div>
+
+                        <div className="rounded-lg bg-white/15 px-4 py-2 text-sm font-medium backdrop-blur">
+                            Pending:{" "}
+                            {currarr.filter(
+                                (task) => !task.activity
+                            ).length}
+                        </div>
+                    </div>
+                </header>
+
+                {/* Add Task */}
+                <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+                    <div className="mb-5">
+                        <h2 className="text-xl font-bold text-slate-800">
+                            Add a Task
+                        </h2>
+
+                        <p className="mt-1 text-sm text-slate-500">
+                            Create a new task or update an existing one.
+                        </p>
+                    </div>
 
                     <Header
-                        listss={handle}
-                        edit={editInput}
                         inputData={inputData}
                         setInputData={setInputData}
+                        fetcher={fetcher}
+                        signal={currsignal}
+                        setSignal={setSignal}
+                        editid={editid}
                     />
                 </section>
 
-                {/* Preview and search */}
-                <div className="mb-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+                {/* Preview and Search */}
+                <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
 
-                    <section className="min-w-0 rounded-2xl bg-white p-5 shadow-md sm:p-6">
-                        <h2 className="mb-4 text-xl font-bold text-slate-800">
-                            Todo Preview
-                        </h2>
+                    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+                        <div className="mb-5">
+                            <h2 className="text-xl font-bold text-slate-800">
+                                Todo Preview
+                            </h2>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                                Check your current task progress.
+                            </p>
+                        </div>
 
                         <TodoPreview
                             todoprev={newarr}
@@ -111,19 +185,24 @@ function App() {
                         />
                     </section>
 
-                    <section className="min-w-0 rounded-2xl bg-white p-5 shadow-md sm:p-6">
-                        <h2 className="mb-4 text-xl font-bold text-slate-800">
-                            Find a Task
-                        </h2>
+                    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+                        <div className="mb-5">
+                            <h2 className="text-xl font-bold text-slate-800">
+                                Find a Task
+                            </h2>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                                Search your tasks by name.
+                            </p>
+                        </div>
 
                         <FilterTodo newarr={newarr} />
                     </section>
-
                 </div>
 
-                {/* Task list */}
-                <section className="rounded-2xl bg-white p-5 shadow-md sm:p-6">
-                    <div className="mb-5">
+                {/* Tasks Table */}
+                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+                    <div className="mb-6">
                         <h2 className="text-xl font-bold text-slate-800">
                             Your Tasks
                         </h2>
@@ -135,21 +214,23 @@ function App() {
 
                     <Body
                         listsss={newarr}
-                        edit={handleEdit}
-                        delet={handleDelete}
+                        edit={edit}
+                        delet={delet}
+                        setSignal={setSignal}
                         checkHandle={checkHandle}
-                        activity={activity}
                     />
                 </section>
 
                 {/* Footer */}
-                <footer className="py-6 text-center text-sm text-slate-500">
+                <footer className="py-8 text-center text-sm text-slate-500">
                     Made for better productivity.
+                    <p className="mt-1 text-xs text-slate-400">
+                        Stay focused. One task at a time.
+                    </p>
                 </footer>
-
             </div>
         </div>
-    )
+    );
 }
 
-export default App
+export default App;
